@@ -95,8 +95,6 @@ function calculateDistance (firstStation, lastStation) {
 
 
 function assignRoute () {
-  // we assign a route (if calculateDistance < 3, we assign again)
-
   
   let firstStation
   let lastStation
@@ -129,13 +127,10 @@ function assignRoute () {
 
   console.log('we have a winner');
   
+  return [firstStation, lastStation]
   
-  // return the path
 }
 
-
-
-assignRoute()
 
 
 function userActions () {
@@ -147,62 +142,235 @@ function userActions () {
 }
 
 
+ 
+
+
+
+
 function App() {
+
   const [count, setCount] = useState(0)
   
   const [personalHighestScore, setPersonalHighestScore] = useState(0)
 
   
-  const [usedStations, setUsedStations] = useState([])
+  const [userSegments, setUserSegments] = useState([])
 
+  const events = {'wrongTrain':-4, 'lostTicket':-3, 'trainDelay':-2, 'spareCoin':-1, 'normalTrip':0, 
+                  'foundCoin':1 ,'earlyTrainArrival':2, 'helpfulPassenger': 3, 'expressTrain': 4}
 
+  const [usedSegments, setUsedSegments] = useState([])
 
-  const [segments, setSegments] = useState([])
-
-
-  const [assignedRoute, setAssignedRoute] = useState()
 
   const [userCoins, setUserCoins] = useState(20)
 
 
-  const [initialStation, setInitialStation] = useState('');
+  const [startStation, setStartStation] = useState('');
   const [endStation, setEndStation] = useState('');
   
   const [gamePhase, setGamePhase] = useState('setup'); 
 
-  // useEffect(() => {
-
-  //   // console.log('gamePhase: ', gamePhase);
-    
-  //   if(gamePhase == 'setup'){
-  //     setInitialStation('')
-  //     setEndStation('')
-  //   } else {
-
-  //   }
-
-
-  // }, [gamePhase])
   
+  const [currentStation, setCurrentStation] = useState('')
+  
+  
+  function startGame () {
+    const targetRoute = assignRoute();
+    setStartStation(targetRoute[0])
+    setCurrentStation(targetRoute[0])
+
+    setEndStation(targetRoute[1])
+    setGamePhase('planning')
+    setUserSegments([])
+  }
+
+
+  function resetGame () {
+    setStartStation('')
+    setEndStation('')
+    setCurrentStation('')
+    setGamePhase('setup')
+    setUserSegments([])
+  }
+
+
+  function validateRoute () {
+
+    let currentSegmentStation = startStation
+    let nextStation = ""
+    let invalidRoute = false
+
+    console.log(userSegments);
+    
+    for (let i = 0; i < userSegments.length; i++){
+      console.log('next station: ', nextStation);
+      
+      if(userSegments[i].from !== currentSegmentStation && userSegments[i].to !== currentSegmentStation){
+        invalidRoute = true
+        break
+      }
+
+      else {
+       if(userSegments[i].from === currentSegmentStation)
+        nextStation = userSegments[i].to
+      
+       if(userSegments[i].to === currentSegmentStation)
+        nextStation = userSegments[i].from
+
+       currentSegmentStation = nextStation
+      }
+
+      if(userSegments[userSegments.length - 1].to !== endStation){
+        invalidRoute = true;
+        break
+      }
+
+    }
+
+    if(invalidRoute === true){
+      alert('You failed!')
+      alert('Coins: 0')
+    } else{
+      console.log('chosen route is valid!');
+    }
+
+
+    setGamePhase('setup')
+    setCurrentStation('')
+    setUserSegments([])
+    setUsedSegments([])
+
+    return invalidRoute;
+
+  }
+
+
+  function routeCost () {
+      
+  }
 
 
 
-
+  // function gameFinished () {
+  //   alert('You just won!')
+  //   alert(`Number of coins: ${userCoins}`)
+  //   setGamePhase('setup')
+  //   setStartStation('')
+  //   setEndStation('')
+  //   setUsedSegments([])
+  //   setUserSegments([])
+  //   setCurrentStation('')
+  // }
 
 
   return (
-    <div style={{ textAlign: 'center', fontFamily: 'sans-serif', background: '#242424', minHeight: '100vh', padding: '20px', color: '#fff' }}>
-      <h1>Last Race Metro Network</h1>
-      <p>Current Phase: <strong>{gamePhase}</strong></p>
-      
-      <button 
-        onClick={() => setGamePhase(gamePhase === 'setup' ? 'Planning' : 'setup')}
-        style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer', marginBottom: '10px' }}
-      >
-        Toggle Setup / Planning View
-      </button>
+    <div className="app-container">
+      <h1>Last Race Metro Game</h1>
+
+      {gamePhase === 'setup' && (
+        <button className="btn-start" onClick={startGame}>
+          I'm Ready to Play!
+        </button>
+      )}
+
+      {gamePhase === 'planning' && (
+        <div className="objective-board">
+          <h2>Your Mission:</h2>
+          <p>Depart from: <strong>{startStation}</strong></p>
+          <p>Arrive at: <strong>{endStation}</strong></p>
+          <button className="btn-start" onClick={resetGame}>
+            Let's reset the game
+        </button>
+        <br/>
+        <button className="btn-finish" onClick={validateRoute}>
+          Submit Route
+        </button>
+        
+        </div>
+      )}
 
       <MetroMap phase={gamePhase} />
+
+      <div className='user-segments-empty'>
+
+        {userSegments.length === 0 && (
+          
+            <div>Start from somewhere!</div>
+          
+          )}
+        
+        {userSegments.length !== 0 && (
+            <div className="route-chain-container">
+              {userSegments.map((userSegment, index) => {
+                return (
+                  <div key={index} className="selected-segment-badge">
+                    <h4>{userSegment.from} ➔ {userSegment.to}</h4>
+                  </div>
+                );
+              })}
+            </div>
+        )}
+
+      </div>
+
+
+      <div className='segments-list'>
+
+        <div className='single-segment'>
+          {gamePhase === 'planning' && metroStationsSegments.map((segment, index) => {
+
+            const [stationA, stationB] = segment
+
+            const segmentAlreadyUsed = usedSegments.some(usedSegment => 
+              (usedSegment[0] === stationA && usedSegment[1] === stationB) ||
+              (usedSegment[0] === stationB && usedSegment[1] === stationA)
+            )
+
+
+            return (
+              <div key={index} className={`segment-badge ${segmentAlreadyUsed ? 'used-red-segment' : ''}`} 
+              
+              onClick={() => {
+
+                if(segmentAlreadyUsed) return;
+
+
+                    let segmentDirection = {from:"", to:""}
+                    
+                    if(stationA === currentStation){
+                    
+                      segmentDirection = {from:currentStation, to:stationB}
+                      setCurrentStation(stationB)
+                    
+                    } else if(stationB === currentStation){
+                      
+                      segmentDirection = {from:currentStation, to:stationA}
+                      setCurrentStation(stationA)
+                    
+                    } else {
+                      segmentDirection = {from:stationA, to:stationB}
+                    }
+
+                    setUsedSegments([...usedSegments, segment])
+                    setUserSegments([...userSegments, segmentDirection])
+
+                
+              }
+         }>
+              
+              
+                <div>
+                    {segment[0]} ↔ {segment[1]}
+                </div>
+                
+              </div>
+            );
+          })}
+        </div>
+      
+      </div>
+
+
     </div>
   );
 }
