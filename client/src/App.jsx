@@ -148,21 +148,16 @@ function userActions () {
 
 
 function App() {
-
-  const [count, setCount] = useState(0)
   
   const [personalHighestScore, setPersonalHighestScore] = useState(0)
 
   
   const [userSegments, setUserSegments] = useState([])
 
-  const events = {'wrongTrain':-4, 'lostTicket':-3, 'trainDelay':-2, 'spareCoin':-1, 'normalTrip':0, 
+  const events = {'trainNotArrivedInTime':-4, 'lostTicket':-3, 'trainDelay':-2, 'spareCoin':-1, 'normalTrip':0, 
                   'foundCoin':1 ,'earlyTrainArrival':2, 'helpfulPassenger': 3, 'expressTrain': 4}
 
   const [usedSegments, setUsedSegments] = useState([])
-
-
-  const [userCoins, setUserCoins] = useState(20)
 
 
   const [startStation, setStartStation] = useState('');
@@ -172,7 +167,8 @@ function App() {
 
   
   const [currentStation, setCurrentStation] = useState('')
-  
+
+  const [showFinalResult, setShowFinalResult] = useState(false)
   
   function startGame () {
     const targetRoute = assignRoute();
@@ -191,6 +187,9 @@ function App() {
     setCurrentStation('')
     setGamePhase('setup')
     setUserSegments([])
+    setUsedSegments([])
+    setRouteLogs([])
+    setShowFinalResult(false)
   }
 
 
@@ -231,36 +230,55 @@ function App() {
       alert('You failed!')
       alert('Coins: 0')
     } else{
+      routeCost()
       console.log('chosen route is valid!');
     }
 
 
-    setGamePhase('setup')
-    setCurrentStation('')
-    setUserSegments([])
-    setUsedSegments([])
+    // setGamePhase('setup')
+    // setCurrentStation('')
+    // setUserSegments([])
+    // setUsedSegments([])
 
     return invalidRoute;
 
   }
 
+  const [routeLogs, setRouteLogs] = useState([])
 
   function routeCost () {
       
+      let initialCoins = 20;
+
+      const routeEvents = Object.keys(events)
+
+      let tempRoute = [] 
+
+      for(let i=0 ; i < userSegments.length ; i++){
+        
+        const randomNum = Math.floor(Math.random() * routeEvents.length);
+      
+        const currentEvent = routeEvents[randomNum]
+        const coinNumber = events[currentEvent]
+
+        initialCoins += coinNumber
+
+        tempRoute.push({segment:`${userSegments[i].from} ➔ ${userSegments[i].to}`,
+                        eventName: currentEvent,
+                        effect: coinNumber,
+                        currentCoins: initialCoins
+        })
+      
+        
+      }
+
+      setRouteLogs(tempRoute)
+
+      setShowFinalResult(true)
+      console.log(routeLogs);
+      console.log('final score: ', initialCoins);
+      
   }
-
-
-
-  // function gameFinished () {
-  //   alert('You just won!')
-  //   alert(`Number of coins: ${userCoins}`)
-  //   setGamePhase('setup')
-  //   setStartStation('')
-  //   setEndStation('')
-  //   setUsedSegments([])
-  //   setUserSegments([])
-  //   setCurrentStation('')
-  // }
 
 
   return (
@@ -290,6 +308,22 @@ function App() {
       )}
 
       <MetroMap phase={gamePhase} />
+
+      <div className='show-final-result'>
+        {showFinalResult && (
+          <>
+            {routeLogs.map((route, index) => {
+              return (
+              <div key={index} className='log-card'>
+                <h3>{route.segment}</h3>
+                <h4>Event: {route.eventName} ({route.effect >= 0 ? `+${route.effect}` : route.effect} 🪙)</h4>
+                <h5>Balance: {route.currentCoins} 🪙</h5>
+              </div>
+              )
+            })}
+          </>
+        )}
+      </div>
 
       <div className='user-segments-empty'>
 
@@ -353,7 +387,6 @@ function App() {
 
                     setUsedSegments([...usedSegments, segment])
                     setUserSegments([...userSegments, segmentDirection])
-
                 
               }
          }>

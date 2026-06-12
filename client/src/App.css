@@ -104,6 +104,123 @@
 
 
 
+
+.show-final-result {
+  max-width: 960px;
+  margin: 30px auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 20px;
+  position: relative;
+  scrollbar-width: thin;
+}
+
+.show-final-result::-webkit-scrollbar {
+  height: 8px;
+}
+.show-final-result::-webkit-scrollbar-track {
+  background: #121212;
+  border-radius: 4px;
+}
+.show-final-result::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 4px;
+}
+.show-final-result::-webkit-scrollbar-thumb:hover {
+  background: #444444;
+}
+
+.show-final-result::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 42px;
+  height: 4px;
+  background: #333333;
+  z-index: 1;
+}
+
+.log-card {
+  box-sizing: border-box;
+  width: 240px;
+  flex-shrink: 0;
+  background-color: #1e1e1e;
+  border: 1px solid #333333;
+  border-left: 4px solid #6c757d;
+  border-radius: 8px;
+  padding: 42px 16px 16px 16px;
+  text-align: left;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 2;
+  animation: slideInRight 0.3s ease-out both;
+}
+
+.log-card::after {
+  content: '●';
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  color: #6c757d;
+  font-size: 16px;
+  background-color: #1e1e1e;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.log-card h3 {
+  margin: 0 0 6px 0;
+  font-size: 15px;
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-card h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: #aaaaaa;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.log-card h5 {
+  margin: 0;
+  font-size: 13px;
+  color: #ffc107;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.log-card:hover {
+  transform: translateY(-4px);
+  transition: transform 0.2s ease;
+}
+
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+
 .user-segments {
   background-color: #1e1e1e;
   border: 1px solid #333333;
