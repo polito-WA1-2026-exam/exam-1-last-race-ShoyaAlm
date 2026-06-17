@@ -1,11 +1,57 @@
 .app-container {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #242424;
+  background-color: #89ac7b;
   color: #ffffff;
   min-height: 100vh;
   padding: 40px 20px;
   text-align: center;
 }
+
+h1, h2 {
+  color: #99caff;
+}
+
+
+
+.timer-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1e1e1e;
+  border: 1px solid #333333;
+  padding: 10px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.timer-badge {
+  font-size: 24px;
+  font-weight: bold;
+  color: #00ffcc;
+  background: #121212;
+  padding: 5px 15px;
+  border-radius: 20px;
+  border: 1px solid #00ffcc;
+}
+
+.timer-urgent .timer-badge {
+  color: #dc3545;
+  border-color: #dc3545;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+
+
+
+
+
+
 
 .btn-start {
   background-color: #007bff;
@@ -105,6 +151,7 @@
 
 
 
+
 .show-final-result {
   max-width: 960px;
   margin: 30px auto;
@@ -143,6 +190,58 @@
   background: #333333;
   z-index: 1;
 }
+
+
+
+.execution-summary-container {
+  max-width: 960px;
+  margin: 20px auto;
+  padding: 0 20px;
+}
+
+.execution-header-block {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #333333;
+}
+
+.success-message {
+  margin: 0;
+  font-size: 22px;
+  color: #c7d7ff;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.btn-restart {
+  background-color: #1e1e1e;
+  color: #ffffff;
+  border: 1px solid #ffc107;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.btn-restart:hover {
+  background-color: #ffc107;
+  color: #121212;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 12px rgba(255, 193, 7, 0.3);
+}
+
+.btn-restart:active {
+  transform: translateY(0);
+}
+
+
+
 
 .log-card {
   box-sizing: border-box;

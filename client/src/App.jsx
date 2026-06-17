@@ -130,18 +130,6 @@ function assignRoute () {
   return [firstStation, lastStation]
   
 }
-
-
-
-function userActions () {
-  // Wrong platform -> setUserCoins(userCoins-2)
-
-  // Kind passenger -> setUserCoins(userCoins+1)
-  
-  // 
-}
-
-
  
 
 
@@ -170,14 +158,38 @@ function App() {
 
   const [showFinalResult, setShowFinalResult] = useState(false)
   
+  const [timeLeft, setTimeLeft] = useState(50)
+
+    useEffect(() => {
+      console.log('1 sec...');
+      
+      if(gamePhase === 'setup')
+        return
+      
+      if(timeLeft === 0){
+          setGamePhase('execution')
+          validateRoute()
+      }
+
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => prevTime - 1)
+    }, 1000)
+
+
+    return () => clearInterval(timer)
+
+    }, [timeLeft, gamePhase])
+
+
   function startGame () {
     const targetRoute = assignRoute();
     setStartStation(targetRoute[0])
     setCurrentStation(targetRoute[0])
-
     setEndStation(targetRoute[1])
-    setGamePhase('planning')
     setUserSegments([])
+    setTimeLeft(50)
+    setGamePhase('planning')
   }
 
 
@@ -195,33 +207,59 @@ function App() {
 
   function validateRoute () {
 
+
+    
+    
     let currentSegmentStation = startStation
     let nextStation = ""
     let invalidRoute = false
-
-    console.log(userSegments);
     
-    for (let i = 0; i < userSegments.length; i++){
-      console.log('next station: ', nextStation);
+    if(userSegments.length === 0)
+      invalidRoute = true
+
+    console.log('userSegments:', userSegments);
+    
+    let visitedSegments = []
+
+
+    if(!invalidRoute){
       
-      if(userSegments[i].from !== currentSegmentStation && userSegments[i].to !== currentSegmentStation){
-        invalidRoute = true
-        break
-      }
-
-      else {
-       if(userSegments[i].from === currentSegmentStation)
-        nextStation = userSegments[i].to
+      for (let i = 0; i < userSegments.length; i++){
+        console.log('next station: ', nextStation);
+        
       
-       if(userSegments[i].to === currentSegmentStation)
-        nextStation = userSegments[i].from
-
-       currentSegmentStation = nextStation
-      }
-
-      if(userSegments[userSegments.length - 1].to !== endStation){
-        invalidRoute = true;
-        break
+        
+        if(userSegments[i].from !== currentSegmentStation && userSegments[i].to !== currentSegmentStation){
+          invalidRoute = true
+          break
+        }
+  
+        const isVisited = visitedSegments.some(segment => 
+          (segment.from === userSegments[i].from && segment.to === userSegments[i].to) 
+          || (segment.to === userSegments[i].from && segment.from === userSegments[i].to))
+  
+        if(isVisited){
+          invalidRoute = true
+          break
+        }
+  
+        visitedSegments.push(userSegments[i])
+  
+        
+         if(userSegments[i].from === currentSegmentStation)
+          nextStation = userSegments[i].to
+        
+         if(userSegments[i].to === currentSegmentStation)
+          nextStation = userSegments[i].from
+  
+         currentSegmentStation = nextStation
+        
+  
+        if(userSegments[userSegments.length - 1].to !== endStation){
+          invalidRoute = true;
+          break
+        }
+  
       }
 
     }
@@ -229,16 +267,13 @@ function App() {
     if(invalidRoute === true){
       alert('You failed!')
       alert('Coins: 0')
+      resetGame()
     } else{
+      setGamePhase('execution')
       routeCost()
       console.log('chosen route is valid!');
     }
 
-
-    // setGamePhase('setup')
-    // setCurrentStation('')
-    // setUserSegments([])
-    // setUsedSegments([])
 
     return invalidRoute;
 
@@ -285,6 +320,20 @@ function App() {
     <div className="app-container">
       <h1>Last Race Metro Game</h1>
 
+
+      {gamePhase === 'planning' && (
+        <>
+          <div className={`timer-banner ${timeLeft <= 10 && gamePhase === 'planning' ? 'timer-urgent' : ''}`}>
+            <h2>
+              {gamePhase === 'setup' ? '⏳ Selecting Random Stations...' : '🛤️ Build Your Route!'}
+            </h2>
+            <div className="timer-badge">
+              <span className="clock-icon">⏱️</span> {timeLeft} seconds left
+            </div>
+          </div>        
+        </>
+      )}
+
       {gamePhase === 'setup' && (
         <button className="btn-start" onClick={startGame}>
           I'm Ready to Play!
@@ -307,101 +356,109 @@ function App() {
         </div>
       )}
 
-      <MetroMap phase={gamePhase} />
+        <MetroMap phase={gamePhase} />
 
-      <div className='show-final-result'>
+      {gamePhase === 'execution' && (
+        <>
+      
         {showFinalResult && (
-          <>
-            {routeLogs.map((route, index) => {
-              return (
+      <div>
+        
+        <div className="execution-header-block">
+          <h3 className="success-message">🎉 Your route was valid!</h3>
+          <button className="btn-restart" onClick={resetGame}>
+            Restart the Game
+          </button>
+        </div>
+
+        <div className='show-final-result'>
+          {routeLogs.map((route, index) => {
+            return (
               <div key={index} className='log-card'>
                 <h3>{route.segment}</h3>
                 <h4>Event: {route.eventName} ({route.effect >= 0 ? `+${route.effect}` : route.effect} 🪙)</h4>
                 <h5>Balance: {route.currentCoins} 🪙</h5>
               </div>
-              )
-            })}
-          </>
-        )}
-      </div>
-
-      <div className='user-segments-empty'>
-
-        {userSegments.length === 0 && (
-          
-            <div>Start from somewhere!</div>
-          
-          )}
-        
-        {userSegments.length !== 0 && (
-            <div className="route-chain-container">
-              {userSegments.map((userSegment, index) => {
-                return (
-                  <div key={index} className="selected-segment-badge">
-                    <h4>{userSegment.from} ➔ {userSegment.to}</h4>
-                  </div>
-                );
-              })}
-            </div>
-        )}
-
-      </div>
-
-
-      <div className='segments-list'>
-
-        <div className='single-segment'>
-          {gamePhase === 'planning' && metroStationsSegments.map((segment, index) => {
-
-            const [stationA, stationB] = segment
-
-            const segmentAlreadyUsed = usedSegments.some(usedSegment => 
-              (usedSegment[0] === stationA && usedSegment[1] === stationB) ||
-              (usedSegment[0] === stationB && usedSegment[1] === stationA)
             )
-
-
-            return (
-              <div key={index} className={`segment-badge ${segmentAlreadyUsed ? 'used-red-segment' : ''}`} 
-              
-              onClick={() => {
-
-                if(segmentAlreadyUsed) return;
-
-
-                    let segmentDirection = {from:"", to:""}
-                    
-                    if(stationA === currentStation){
-                    
-                      segmentDirection = {from:currentStation, to:stationB}
-                      setCurrentStation(stationB)
-                    
-                    } else if(stationB === currentStation){
-                      
-                      segmentDirection = {from:currentStation, to:stationA}
-                      setCurrentStation(stationA)
-                    
-                    } else {
-                      segmentDirection = {from:stationA, to:stationB}
-                    }
-
-                    setUsedSegments([...usedSegments, segment])
-                    setUserSegments([...userSegments, segmentDirection])
-                
-              }
-         }>
-              
-              
-                <div>
-                    {segment[0]} ↔ {segment[1]}
-                </div>
-                
-              </div>
-            );
           })}
         </div>
-      
+
       </div>
+    )}
+
+      </>)}
+
+      {gamePhase === 'planning' && (<>
+      
+        <div className='user-segments-empty'>
+
+          {userSegments.length === 0 && (
+            
+              <div>Start from somewhere!</div>
+            
+            )}
+          
+          {userSegments.length !== 0 && (
+              <div className="route-chain-container">
+                {userSegments.map((userSegment, index) => {
+                  return (
+                    <div key={index} className="selected-segment-badge">
+                      <h4>{userSegment.from} ➔ {userSegment.to}</h4>
+                    </div>
+                  );
+                })}
+              </div>
+          )}
+
+        </div>
+
+        <div className='segments-list'>
+
+          <div className='single-segment'>
+            {gamePhase === 'planning' && metroStationsSegments.map((segment, index) => {
+
+              const [stationA, stationB] = segment
+
+              return (
+                <div key={index} className={'segment-badge'} 
+                
+                onClick={() => {
+
+
+                      let segmentDirection = {from:"", to:""}
+                      
+                      if(stationA === currentStation){
+                      
+                        segmentDirection = {from:currentStation, to:stationB}
+                        setCurrentStation(stationB)
+                      
+                      } else if(stationB === currentStation){
+                        
+                        segmentDirection = {from:currentStation, to:stationA}
+                        setCurrentStation(stationA)
+                      
+                      } else {
+                        segmentDirection = {from:stationA, to:stationB}
+                      }
+
+                      setUsedSegments([...usedSegments, segment])
+                      setUserSegments([...userSegments, segmentDirection])
+                  
+                }
+          }>
+                
+                
+                  <div>
+                      {segment[0]} ↔ {segment[1]}
+                  </div>
+                  
+                </div>
+              );
+            })}
+          </div>
+        
+        </div>
+      </>)}
 
 
     </div>
