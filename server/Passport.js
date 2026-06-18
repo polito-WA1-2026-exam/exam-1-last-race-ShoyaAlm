@@ -1,10 +1,11 @@
-const express = require('express')
+import express from 'express'
 const app = express()
 
-const passport = require('passport')
-const LocalStrategy = require('passport-local').Strategy
-const bcrypt = require('bcrypt')
-const db = require('./db')
+import passport from 'passport'
+import { Strategy as LocalStrategy } from 'passport-local'
+
+import bcrypt from 'bcrypt'
+import db from './db.js'
 
 
 passport.use(new LocalStrategy(
@@ -14,7 +15,7 @@ passport.use(new LocalStrategy(
             if (err) 
                 return done(err)
             
-            if(!err) 
+            if(!user) 
                 return done(null, false, {message:'incorrect username'})
             
             try {
@@ -45,4 +46,4 @@ passport.deserializeUser((id, done) => {
 })
 
 
-module.exports = passport
+export default passport
