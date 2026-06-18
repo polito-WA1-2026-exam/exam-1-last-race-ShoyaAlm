@@ -1,4 +1,4 @@
-import './metro.css';
+import './css/metro.css';
 
 const STATION_COORDINATES = {
   "Harlem": { x: 50, y: 100 },

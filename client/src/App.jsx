@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import './App.css'
+import './css/App.css'
 import MetroMap from './metro'
-
-
+import Login from './login'
+import Scoreboard from './Scoreboard'
 
   const stations = ["Harlem", "Addison", "Belmon", "Division", "Damen", "Lawrence", "Clark", 
     "Monroe", "Quincy", "Jackson", "Adams", "Howard", "Morgan", "Central", "Kimball", "Roosevelt", 
@@ -137,8 +137,8 @@ function assignRoute () {
 
 function App() {
   
-  const [personalHighestScore, setPersonalHighestScore] = useState(0)
-
+  const [user, setUser] = useState(null)
+  const [currentScreen, setCurrentScreen] = useState('login')
   
   const [userSegments, setUserSegments] = useState([])
 
@@ -163,12 +163,13 @@ function App() {
     useEffect(() => {
       console.log('1 sec...');
       
-      if(gamePhase === 'setup')
+      if(gamePhase !== 'planning')
         return
       
       if(timeLeft === 0){
           setGamePhase('execution')
           validateRoute()
+          return
       }
 
 
@@ -207,9 +208,6 @@ function App() {
 
   function validateRoute () {
 
-
-    
-    
     let currentSegmentStation = startStation
     let nextStation = ""
     let invalidRoute = false
@@ -280,7 +278,9 @@ function App() {
   }
 
   const [routeLogs, setRouteLogs] = useState([])
-
+  
+  console.log(user);
+ 
   function routeCost () {
       
       let initialCoins = 20;
@@ -309,159 +309,214 @@ function App() {
 
       setRouteLogs(tempRoute)
 
+      
+      if(initialCoins > user.highestScore){
+        
+        fetch('/api/updateScore', {
+          method:'PUT',
+          headers:{'Content-Type': 'application/json'},
+          credentials: 'include',
+          body: JSON.stringify({newScore: initialCoins})        
+        })
+        .then(res => res.json())
+        .then(data => {
+          if(data.success){
+            setUser(prev => ({...prev, highestScore:initialCoins}))
+            console.log(`user's highest score updated to ${initialCoins}`);
+          } else {
+            console.log('failed to update score: ', data.message);
+          }
+        })
+        .catch(err => console.error('Network error updating score: ', err))
+
+
+      }
+
       setShowFinalResult(true)
       console.log(routeLogs);
       console.log('final score: ', initialCoins);
       
   }
 
+  // console.log(user);
+  
+
+  function handleLogout () {
+    fetch('/api/logout', {method:'POST'})
+    .then(() => {
+      setUser(null)
+      setCurrentScreen('login')
+      // setGamePhase('menu')
+    })
+  }
 
   return (
-    <div className="app-container">
-      <h1>Last Race Metro Game</h1>
 
-
-      {gamePhase === 'planning' && (
-        <>
-          <div className={`timer-banner ${timeLeft <= 10 && gamePhase === 'planning' ? 'timer-urgent' : ''}`}>
-            <h2>
-              {gamePhase === 'setup' ? '⏳ Selecting Random Stations...' : '🛤️ Build Your Route!'}
-            </h2>
-            <div className="timer-badge">
-              <span className="clock-icon">⏱️</span> {timeLeft} seconds left
-            </div>
-          </div>        
-        </>
-      )}
-
-      {gamePhase === 'setup' && (
-        <button className="btn-start" onClick={startGame}>
-          I'm Ready to Play!
-        </button>
-      )}
-
-      {gamePhase === 'planning' && (
-        <div className="objective-board">
-          <h2>Your Mission:</h2>
-          <p>Depart from: <strong>{startStation}</strong></p>
-          <p>Arrive at: <strong>{endStation}</strong></p>
-          <button className="btn-start" onClick={resetGame}>
-            Let's reset the game
-        </button>
-        <br/>
-        <button className="btn-finish" onClick={validateRoute}>
-          Submit Route
-        </button>
-        
-        </div>
-      )}
-
-        <MetroMap phase={gamePhase} />
-
-      {gamePhase === 'execution' && (
-        <>
-      
-        {showFinalResult && (
-      <div>
-        
-        <div className="execution-header-block">
-          <h3 className="success-message">🎉 Your route was valid!</h3>
-          <button className="btn-restart" onClick={resetGame}>
-            Restart the Game
-          </button>
-        </div>
-
-        <div className='show-final-result'>
-          {routeLogs.map((route, index) => {
-            return (
-              <div key={index} className='log-card'>
-                <h3>{route.segment}</h3>
-                <h4>Event: {route.eventName} ({route.effect >= 0 ? `+${route.effect}` : route.effect} 🪙)</h4>
-                <h5>Balance: {route.currentCoins} 🪙</h5>
-              </div>
-            )
-          })}
-        </div>
-
-      </div>
+    <>
+    {(currentScreen === 'login' || user === null) && (
+      <Login loginSuccess={(loggedInUser) => {
+        setUser(loggedInUser)
+        setCurrentScreen('game')
+      }}/>
     )}
 
-      </>)}
+    {currentScreen === 'game' && user !== null && (
+      <>
+        <h5>Hello {user.username}</h5>
+        <div className="app-container">
+          <h1>Last Race Metro Game</h1>
+          <button onClick={handleLogout}>Logout</button>
+          {gamePhase === 'planning' && (
+            <>
+              <div className={`timer-banner ${timeLeft <= 10 && gamePhase === 'planning' ? 'timer-urgent' : ''}`}>
+                <h2>
+                  {gamePhase === 'setup' ? '⏳ Selecting Random Stations...' : '🛤️ Build Your Route!'}
+                </h2>
+                <div className="timer-badge">
+                  <span className="clock-icon">⏱️</span> {timeLeft} seconds left
+                </div>
+              </div>        
+            </>
+          )}
 
-      {gamePhase === 'planning' && (<>
-      
-        <div className='user-segments-empty'>
+          {gamePhase === 'setup' && (
+            <button className="btn-start" onClick={startGame}>
+              I'm Ready to Play!
+            </button>
+          )}
 
-          {userSegments.length === 0 && (
+          {gamePhase === 'planning' && (
+            <div className="objective-board">
+              <h2>Your Mission:</h2>
+              <p>Depart from: <strong>{startStation}</strong></p>
+              <p>Arrive at: <strong>{endStation}</strong></p>
+              <button className="btn-start" onClick={resetGame}>
+                Let's reset the game
+            </button>
+            <br/>
+            <button className="btn-finish" onClick={validateRoute}>
+              Submit Route
+            </button>
             
-              <div>Start from somewhere!</div>
-            
-            )}
+            </div>
+          )}
+
+            <MetroMap phase={gamePhase} />
+
+          {gamePhase === 'execution' && (
+            <>
           
-          {userSegments.length !== 0 && (
-              <div className="route-chain-container">
-                {userSegments.map((userSegment, index) => {
+            {showFinalResult && (
+          <div>
+            
+            <div className="execution-header-block">
+              <h3 className="success-message">🎉 Your route was valid!</h3>
+              <button className="btn-restart" onClick={resetGame}>
+                Restart the Game
+              </button>
+            </div>
+
+            <div className='show-final-result'>
+              {routeLogs.map((route, index) => {
+                return (
+                  <div key={index} className='log-card'>
+                    <h3>{route.segment}</h3>
+                    <h4>Event: {route.eventName} ({route.effect >= 0 ? `+${route.effect}` : route.effect} 🪙)</h4>
+                    <h5>Balance: {route.currentCoins} 🪙</h5>
+                  </div>
+                )
+              })}
+            </div>
+
+          </div>
+        )}
+
+          </>)}
+
+          {gamePhase === 'planning' && (<>
+          
+            <div className='user-segments-empty'>
+
+              {userSegments.length === 0 && (
+                
+                  <div>Start from somewhere!</div>
+                
+                )}
+              
+              {userSegments.length !== 0 && (
+                  <div className="route-chain-container">
+                    {userSegments.map((userSegment, index) => {
+                      return (
+                        <div key={index} className="selected-segment-badge">
+                          <h4>{userSegment.from} ➔ {userSegment.to}</h4>
+                        </div>
+                      );
+                    })}
+                  </div>
+              )}
+
+            </div>
+
+            <div className='segments-list'>
+
+              <div className='single-segment'>
+                {gamePhase === 'planning' && metroStationsSegments.map((segment, index) => {
+
+                  const [stationA, stationB] = segment
+
                   return (
-                    <div key={index} className="selected-segment-badge">
-                      <h4>{userSegment.from} ➔ {userSegment.to}</h4>
+                    <div key={index} className={'segment-badge'} 
+                    
+                    onClick={() => {
+
+
+                          let segmentDirection = {from:"", to:""}
+                          
+                          if(stationA === currentStation){
+                          
+                            segmentDirection = {from:currentStation, to:stationB}
+                            setCurrentStation(stationB)
+                          
+                          } else if(stationB === currentStation){
+                            
+                            segmentDirection = {from:currentStation, to:stationA}
+                            setCurrentStation(stationA)
+                          
+                          } else {
+                            segmentDirection = {from:stationA, to:stationB}
+                          }
+
+                          setUsedSegments([...usedSegments, segment])
+                          setUserSegments([...userSegments, segmentDirection])
+                      
+                    }
+              }>
+                    
+                    
+                      <div>
+                          {segment[0]} ↔ {segment[1]}
+                      </div>
+                      
                     </div>
                   );
                 })}
               </div>
-          )}
+            
+            </div>
+          </>)}
+
 
         </div>
-
-        <div className='segments-list'>
-
-          <div className='single-segment'>
-            {gamePhase === 'planning' && metroStationsSegments.map((segment, index) => {
-
-              const [stationA, stationB] = segment
-
-              return (
-                <div key={index} className={'segment-badge'} 
-                
-                onClick={() => {
+      
+      </>
+    )}
 
 
-                      let segmentDirection = {from:"", to:""}
-                      
-                      if(stationA === currentStation){
-                      
-                        segmentDirection = {from:currentStation, to:stationB}
-                        setCurrentStation(stationB)
-                      
-                      } else if(stationB === currentStation){
-                        
-                        segmentDirection = {from:currentStation, to:stationA}
-                        setCurrentStation(stationA)
-                      
-                      } else {
-                        segmentDirection = {from:stationA, to:stationB}
-                      }
+    {currentScreen === 'scoreboard' && (
+      <>  </>
+    )}
 
-                      setUsedSegments([...usedSegments, segment])
-                      setUserSegments([...userSegments, segmentDirection])
-                  
-                }
-          }>
-                
-                
-                  <div>
-                      {segment[0]} ↔ {segment[1]}
-                  </div>
-                  
-                </div>
-              );
-            })}
-          </div>
-        
-        </div>
-      </>)}
-
-
-    </div>
+    </>
   );
 }
 
