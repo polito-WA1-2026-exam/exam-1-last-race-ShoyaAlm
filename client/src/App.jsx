@@ -133,6 +133,9 @@ function assignRoute () {
  
 
 
+  let userScore = 0
+  
+  let invalidRoute = false
 
 
 function App() {
@@ -160,7 +163,25 @@ function App() {
   
   const [timeLeft, setTimeLeft] = useState(50)
 
-    useEffect(() => {
+
+  useEffect(() => {
+    fetch('/api/user', {
+      method:'GET',
+      credentials:'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+      if(data.isAuthenticated === true){
+        setUser(data.user)
+        setCurrentScreen('game')
+        console.log('Hello ', data.user.username);
+      }
+    }).catch(err => console.error('Authentication error'))
+
+  }, [])
+
+
+  useEffect(() => {
       console.log('1 sec...');
       
       if(gamePhase !== 'planning')
@@ -202,6 +223,8 @@ function App() {
     setUserSegments([])
     setUsedSegments([])
     setRouteLogs([])
+    userScore = 0
+    invalidRoute = false
     setShowFinalResult(false)
   }
 
@@ -210,7 +233,6 @@ function App() {
 
     let currentSegmentStation = startStation
     let nextStation = ""
-    let invalidRoute = false
     
     if(userSegments.length === 0)
       invalidRoute = true
@@ -263,9 +285,10 @@ function App() {
     }
 
     if(invalidRoute === true){
-      alert('You failed!')
-      alert('Coins: 0')
-      resetGame()
+      setGamePhase('execution')
+      console.log(userSegments);
+      setRouteLogs(userSegments)
+      setShowFinalResult(true)
     } else{
       setGamePhase('execution')
       routeCost()
@@ -278,9 +301,10 @@ function App() {
   }
 
   const [routeLogs, setRouteLogs] = useState([])
-  
-  console.log(user);
- 
+   
+  const [allScores, setAllScores] = useState('')
+
+
   function routeCost () {
       
       let initialCoins = 20;
@@ -309,6 +333,13 @@ function App() {
 
       setRouteLogs(tempRoute)
 
+      console.log(tempRoute);
+      
+
+      if(initialCoins < 0)
+        initialCoins = 0
+
+      userScore = initialCoins
       
       if(initialCoins > user.highestScore){
         
@@ -333,12 +364,10 @@ function App() {
       }
 
       setShowFinalResult(true)
-      console.log(routeLogs);
       console.log('final score: ', initialCoins);
       
   }
 
-  // console.log(user);
   
 
   function handleLogout () {
@@ -350,10 +379,25 @@ function App() {
     })
   }
 
+  function showScores () {
+    
+    setCurrentScreen('scoreboard')
+
+    fetch('/api/scores')
+    .then(res => res.json())
+    .then(data => {
+      if(data.success){
+        console.log(data);
+        
+        setAllScores(data.scores)
+      }
+    })
+  }
+
   return (
 
     <>
-    {(currentScreen === 'login' || user === null) && (
+    {currentScreen === 'login' && user === null && (
       <Login loginSuccess={(loggedInUser) => {
         setUser(loggedInUser)
         setCurrentScreen('game')
@@ -362,10 +406,23 @@ function App() {
 
     {currentScreen === 'game' && user !== null && (
       <>
-        <h5>Hello {user.username}</h5>
+
+      {gamePhase !== 'planning' && (
+        <>
+          <nav className="game-nav-bar">
+            <button onClick={handleLogout} className="nav-btn logout-btn">Logout</button>
+            
+            <h5 className="nav-user-greeting">
+              Hello <span className="username-highlight">{user.username}</span>
+            </h5>
+            
+            <button onClick={showScores} className="nav-btn scoreboard-btn">ScoreBoard</button>
+          </nav>
+        </>
+      )}
+
         <div className="app-container">
           <h1>Last Race Metro Game</h1>
-          <button onClick={handleLogout}>Logout</button>
           {gamePhase === 'planning' && (
             <>
               <div className={`timer-banner ${timeLeft <= 10 && gamePhase === 'planning' ? 'timer-urgent' : ''}`}>
@@ -410,23 +467,50 @@ function App() {
           <div>
             
             <div className="execution-header-block">
-              <h3 className="success-message">🎉 Your route was valid!</h3>
-              <button className="btn-restart" onClick={resetGame}>
-                Restart the Game
-              </button>
+              {!invalidRoute ? (
+                <>
+                {userScore > 0 ? (
+                  <>
+                    <h3 className="execution-message">🎉 Your route was valid!</h3>
+                    <h2>Final Score: {userScore}</h2>
+                  </>
+                ) : (<>
+                    <h3 className="execution-message">Your score is 0</h3>
+                    <h2>Final Score: 0</h2>
+                </>)}
+                </>
+              ) : (<>
+
+                  <h3 className="execution-message">Your route was invalid!</h3>
+                  <h2>Final Score: 0</h2>
+
+              </>)
+              
+              
+              }
+                  <button className="btn-restart" onClick={resetGame}>
+                    Restart the Game
+                  </button>
             </div>
 
-            <div className='show-final-result'>
-              {routeLogs.map((route, index) => {
-                return (
-                  <div key={index} className='log-card'>
-                    <h3>{route.segment}</h3>
-                    <h4>Event: {route.eventName} ({route.effect >= 0 ? `+${route.effect}` : route.effect} 🪙)</h4>
+              <div className='show-final-result'>
+                {routeLogs.map((route, index) => {
+                  return (
+                <div key={index} className='log-card'>
+                  {!invalidRoute ? (<>
+                  
+                  <h3>{route.segment}</h3>
+                  <h4>Event: {route.eventName} ({route.effect >= 0 ? `+${route.effect}` : route.effect} 🪙)</h4>
                     <h5>Balance: {route.currentCoins} 🪙</h5>
-                  </div>
-                )
-              })}
-            </div>
+                  </>) : (<>
+                    <h3>{route.from} ➔ {route.to}</h3>
+                    {/* <h4>Event: {route.eventName} ({route.effect >= 0 ? `+${route.effect}` : route.effect} 🪙)</h4> */}
+                    </>)}
+                </div>
+                  )
+                })}
+              </div>
+            
 
           </div>
         )}
@@ -512,8 +596,10 @@ function App() {
     )}
 
 
-    {currentScreen === 'scoreboard' && (
-      <>  </>
+    {currentScreen === 'scoreboard' && gamePhase !== 'planning' && (
+      <>       
+        <Scoreboard scores={allScores} backToGame={() => setCurrentScreen('game')}/> 
+      </>
     )}
 
     </>
