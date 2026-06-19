@@ -9,7 +9,6 @@ const login = (req, res) => {
         highestScore: req.user.highestScore}})
 }
 
-
 const logout = (req, res, next) => {
     req.logout((err) => {
         if(err)
@@ -20,6 +19,40 @@ const logout = (req, res, next) => {
             res.json({success:true, message:'successfully logged out'})
         })
     })
+}
+
+const getCurrentUser = (req, res) => {
+    if(!req.user)
+        return res.status(404).json({isAuthenticated:false, user:null})
+
+
+    else
+        return res.json({
+            isAuthenticated: true,
+            user: {
+                id: req.user.id,
+                username: req.user.username,
+                highestScore: req.user.highestScore
+            }
+            
+        })
+
+}
+
+const getUsersScores = (req, res) => {
+
+   const query = `SELECT username, highestScore FROM users ORDER BY highestScore DESC`
+   db.all(query, [], (err, rows) => {
+        
+        if(err){
+            console.error('Could not receive user data: ', err.message);
+            return res.status(500).json({success:false, message:err.message})
+        }
+
+        return res.status(200).json({success:true, scores:rows})
+        
+    })
+    
 }
 
 const updateUserScore = (req, res) => {
@@ -56,4 +89,4 @@ const updateUserScore = (req, res) => {
 
 }
 
-export default {login, logout, updateUserScore}
+export default {login, logout, getCurrentUser, getUsersScores, updateUserScore}
