@@ -4,17 +4,10 @@ import MetroMap from './metro'
 import Login from './login'
 import Scoreboard from './Scoreboard'
 
-  const stations = ["Harlem", "Addison", "Belmon", "Division", "Damen", "Lawrence", "Clark", 
-    "Monroe", "Quincy", "Jackson", "Adams", "Howard", "Morgan", "Central", "Kimball", "Roosevelt", 
-    "Harrison", "Washington", "Grand", "Wells"]
 
-
-  const metroStationsSegments = [
-  ['Harlem', 'Addison'], ['Addison', 'Damen'], ['Damen', 'Wells'], ['Wells', 'Clark'], ['Clark', 'Lawrence'],
-  ['Roosevelt','Jackson'], ['Jackson','Quincy'], ['Quincy','Damen'], ['Damen','Central'], ['Central','Kimball'], 
-  ['Harrison', 'Morgan'], ['Morgan', 'Monroe'], ['Monroe', 'Quincy'], ['Quincy', 'Wells'], ['Wells','Division'], 
-  ['Division','Belmon'],
-  ['Howard', 'Adams'], ['Adams', 'Jackson'], ['Jackson', 'Clark'], ['Clark', 'Grand'], ['Grand', 'Washington']]
+  let stations = []
+  let metroSegments = []
+  let events = {}
 
 
 function calculateDistance (firstStation, lastStation) {
@@ -22,13 +15,16 @@ function calculateDistance (firstStation, lastStation) {
   console.log('firstStation: ', firstStation);
   console.log('lastStation: ', lastStation);
   
+  if(!metroSegments || metroSegments.length === 0)
+    return 3;
+  
   if(firstStation === lastStation)
     return 0;
+
   
-  // calculate the distance to make sure there's at least 3 segments invovled  
   var distance
 
-  const neighborStations = metroStationsSegments.filter(metroStation => metroStation[0] == firstStation 
+  const neighborStations = metroSegments.filter(metroStation => metroStation[0] == firstStation 
     || metroStation[1] == firstStation)
   
   
@@ -54,9 +50,6 @@ function calculateDistance (firstStation, lastStation) {
     return 1
 
 
-  // over here, I to try to scan the neighbors of the firstStation's neighbors itself
-      // for each neighbor, we check their neighbors now
-      
       var currentStations = []
       
       neighborStations.map(neighborStation => {
@@ -74,7 +67,7 @@ function calculateDistance (firstStation, lastStation) {
       
       currentStations.map(currentStation => {
 
-        metroStationsSegments.map(segment => {
+        metroSegments.map(segment => {
           if((segment[0] == currentStation && segment[1] == lastStation) 
             || (segment[1] == currentStation && segment[0] == lastStation)){
               console.log('the segment of the neighbor: ', segment);
@@ -131,22 +124,19 @@ function assignRoute () {
   
 }
  
-
-
-  let userScore = 0
   
-  let invalidRoute = false
-
 
 function App() {
   
   const [user, setUser] = useState(null)
   const [currentScreen, setCurrentScreen] = useState('login')
   
+  const [stationCoordinates, setStationCoordinates] = useState(null)
+  const [metroLines, setMetroLines] = useState(null);
+
+
   const [userSegments, setUserSegments] = useState([])
 
-  const events = {'trainNotArrivedInTime':-4, 'lostTicket':-3, 'trainDelay':-2, 'spareCoin':-1, 'normalTrip':0, 
-                  'foundCoin':1 ,'earlyTrainArrival':2, 'helpfulPassenger': 3, 'expressTrain': 4}
 
   const [usedSegments, setUsedSegments] = useState([])
 
@@ -164,21 +154,63 @@ function App() {
   const [timeLeft, setTimeLeft] = useState(50)
 
 
+  const [routeLogs, setRouteLogs] = useState([])
+
+  const [loadingGame, setLoadingGame] = useState(true)
+
+  const [invalidRoute, setInvalidRoute] = useState(false)
+
+  const [userScore, setUserScore] = useState(0)
+
+  const [visibleLogs, setVisibleLogs] = useState([])
+
+
+
   useEffect(() => {
-    fetch('/api/user', {
-      method:'GET',
-      credentials:'include'
-    })
+    fetch('/api/map-layout')
     .then(res => res.json())
     .then(data => {
-      if(data.isAuthenticated === true){
-        setUser(data.user)
-        setCurrentScreen('game')
-        console.log('Hello ', data.user.username);
+      if(data.success){
+        setStationCoordinates(data.stationCoordinates)
+        setMetroLines(data.metroLines)
+      } else {
+        console.error("Failed to load map data: ", data.message);
       }
-    }).catch(err => console.error('Authentication error'))
+    }).catch(err => console.error('Network error fetching the map: ', err))
+  }, [])
+
+  useEffect(() => {
+      fetch('/api/user', {
+        method:'GET',
+        credentials:'include'
+      })
+      .then(res => res.json())
+      .then(data => {
+        if(data.isAuthenticated === true){
+          setUser(data.user)
+          setCurrentScreen('game')
+          console.log('Hello ', data.user.username);
+        }
+      }).catch(err => console.error('Authentication error'))
+
+    }, [])
+
+  useEffect(() => {
+
+    fetch('/api/game-details')
+    .then(res => res.json())
+    .then(data => {
+      if(data.success){
+        stations = data.gameDetails.stations
+        metroSegments = data.gameDetails.metroSegments
+        events = data.gameDetails.events
+        setLoadingGame(false)
+      }
+    }).catch(err => console.error("Error loading the game details: ", err))
 
   }, [])
+
+
 
 
   useEffect(() => {
@@ -204,7 +236,41 @@ function App() {
     }, [timeLeft, gamePhase])
 
 
+    useEffect(() => {
+
+      const logsLength = routeLogs ? routeLogs.length : 0
+      if(gamePhase !== 'execution' || logsLength === 0){
+        setVisibleLogs([])
+        return
+      }
+
+      let currentIndex = 0
+
+      const playbackInterval = setInterval(() => {
+        if(currentIndex < routeLogs.length){
+          let nextLog = routeLogs[currentIndex]
+          
+          if(nextLog){
+            setVisibleLogs((prev) => [...prev, nextLog])
+          }
+          
+          currentIndex++
+
+        } else {
+          clearInterval(playbackInterval)
+        }
+      }, 2000)
+
+      return () => clearInterval(playbackInterval)
+
+    }, [routeLogs, gamePhase])
+
   function startGame () {
+    console.log('stations: ', stations);
+    console.log('metroSegments: ', metroSegments);
+    console.log('events: ', events);
+    
+    
     const targetRoute = assignRoute();
     setStartStation(targetRoute[0])
     setCurrentStation(targetRoute[0])
@@ -223,159 +289,70 @@ function App() {
     setUserSegments([])
     setUsedSegments([])
     setRouteLogs([])
-    userScore = 0
-    invalidRoute = false
+    setUserScore(0)
+    setInvalidRoute(false)
     setShowFinalResult(false)
   }
 
 
+
   function validateRoute () {
 
-    let currentSegmentStation = startStation
-    let nextStation = ""
-    
-    if(userSegments.length === 0)
-      invalidRoute = true
+    setGamePhase('execution')
 
-    console.log('userSegments:', userSegments);
-    
-    let visitedSegments = []
+    fetch('/api/submit-route', {
+      method:'POST',
+      headers:{'Content-Type': 'application/json'},
+      credentials:'include',
+      body: JSON.stringify({
+        startStation:startStation,
+        endStation:endStation,
+        userSegments:userSegments,
+        user: user
+      })
+    }).then(res => res.json())
+    .then(data => {
+      if(data.success){
 
+        setRouteLogs(data.routeLogs)
+        setInvalidRoute(!data.valid)
+        setUserScore(data.userScore)
+        console.log('data: ', data);
+        
 
-    if(!invalidRoute){
-      
-      for (let i = 0; i < userSegments.length; i++){
-        console.log('next station: ', nextStation);
-        
-      
-        
-        if(userSegments[i].from !== currentSegmentStation && userSegments[i].to !== currentSegmentStation){
-          invalidRoute = true
-          break
+        setShowFinalResult(true)
+
+        if(data.valid){
+          setUser(prev => ({
+            ...prev, highestScore: data.highestScore
+          }))
+          console.log(data.message, 'final score: ', data.userScore);
+         
+        } else {
+          console.log('Route verification failed: ', data.message);
         }
-  
-        const isVisited = visitedSegments.some(segment => 
-          (segment.from === userSegments[i].from && segment.to === userSegments[i].to) 
-          || (segment.to === userSegments[i].from && segment.from === userSegments[i].to))
-  
-        if(isVisited){
-          invalidRoute = true
-          break
-        }
-  
-        visitedSegments.push(userSegments[i])
-  
-        
-         if(userSegments[i].from === currentSegmentStation)
-          nextStation = userSegments[i].to
-        
-         if(userSegments[i].to === currentSegmentStation)
-          nextStation = userSegments[i].from
-  
-         currentSegmentStation = nextStation
-        
-  
-        if(userSegments[userSegments.length - 1].to !== endStation){
-          invalidRoute = true;
-          break
-        }
-  
+
+      } else {
+        console.error('Server encountered some errors', data.message);
       }
-
-    }
-
-    if(invalidRoute === true){
-      setGamePhase('execution')
-      console.log(userSegments);
-      setRouteLogs(userSegments)
-      setShowFinalResult(true)
-    } else{
-      setGamePhase('execution')
-      routeCost()
-      console.log('chosen route is valid!');
-    }
-
-
-    return invalidRoute;
+    }).catch(err => console.error('Network transport error submitting transit map layout: ', err))
 
   }
 
-  const [routeLogs, setRouteLogs] = useState([])
    
   const [allScores, setAllScores] = useState('')
 
 
-  function routeCost () {
-      
-      let initialCoins = 20;
-
-      const routeEvents = Object.keys(events)
-
-      let tempRoute = [] 
-
-      for(let i=0 ; i < userSegments.length ; i++){
-        
-        const randomNum = Math.floor(Math.random() * routeEvents.length);
-      
-        const currentEvent = routeEvents[randomNum]
-        const coinNumber = events[currentEvent]
-
-        initialCoins += coinNumber
-
-        tempRoute.push({segment:`${userSegments[i].from} ➔ ${userSegments[i].to}`,
-                        eventName: currentEvent,
-                        effect: coinNumber,
-                        currentCoins: initialCoins
-        })
-      
-        
-      }
-
-      setRouteLogs(tempRoute)
-
-      console.log(tempRoute);
-      
-
-      if(initialCoins < 0)
-        initialCoins = 0
-
-      userScore = initialCoins
-      
-      if(initialCoins > user.highestScore){
-        
-        fetch('/api/updateScore', {
-          method:'PUT',
-          headers:{'Content-Type': 'application/json'},
-          credentials: 'include',
-          body: JSON.stringify({newScore: initialCoins})        
-        })
-        .then(res => res.json())
-        .then(data => {
-          if(data.success){
-            setUser(prev => ({...prev, highestScore:initialCoins}))
-            console.log(`user's highest score updated to ${initialCoins}`);
-          } else {
-            console.log('failed to update score: ', data.message);
-          }
-        })
-        .catch(err => console.error('Network error updating score: ', err))
-
-
-      }
-
-      setShowFinalResult(true)
-      console.log('final score: ', initialCoins);
-      
-  }
-
   
 
   function handleLogout () {
+    
+    resetGame()
+
     fetch('/api/logout', {method:'POST'})
     .then(() => {
       setUser(null)
       setCurrentScreen('login')
-      // setGamePhase('menu')
     })
   }
 
@@ -393,6 +370,7 @@ function App() {
       }
     })
   }
+  
 
   return (
 
@@ -401,10 +379,16 @@ function App() {
       <Login loginSuccess={(loggedInUser) => {
         setUser(loggedInUser)
         setCurrentScreen('game')
-      }}/>
+      }} changeCurrentScreen={setCurrentScreen}/>
     )}
 
-    {currentScreen === 'game' && user !== null && (
+    {loadingGame && (
+      <>
+      <div style={{ padding: '40px', textAlign: 'center' }}>Loading Metro Network Maps...</div>
+      </>
+    )}
+
+    {currentScreen === 'game' && user !== null && loadingGame === false && (
       <>
 
       {gamePhase !== 'planning' && (
@@ -458,7 +442,28 @@ function App() {
             </div>
           )}
 
-            <MetroMap phase={gamePhase} />
+            {gamePhase === 'execution' && (
+              <div className="objective-board">
+                <span className="objective-label">Current Journey</span>
+                <div className="objective-route-row">
+                  <div className="station-pill departure">
+                    <span className="pill-type">FROM</span>
+                    <strong>{startStation}</strong>
+                  </div>
+                  
+                  <div className="route-arrow">➔</div>
+                  
+                  <div className="station-pill arrival">
+                    <span className="pill-type">TO</span>
+                    <strong>{endStation}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <MetroMap phase={gamePhase} 
+            stationCoordinates={stationCoordinates}
+            metroLines={metroLines}/>
 
           {gamePhase === 'execution' && (
             <>
@@ -475,15 +480,20 @@ function App() {
                     <h2>Final Score: {userScore}</h2>
                   </>
                 ) : (<>
-                    <h3 className="execution-message">Your score is 0</h3>
+                    <h3 className="execution-message">Your didn't get to the destination!</h3>
                     <h2>Final Score: 0</h2>
                 </>)}
                 </>
               ) : (<>
 
-                  <h3 className="execution-message">Your route was invalid!</h3>
+              {routeLogs.length !== 0 ? (<>
+                  <h3 className="execution-message">Your route was incomplete or invalid!</h3>
+                  <h2>Final Score: 0</h2>                             
+              </>) : (<>
+                  <h3 className="execution-message">You didn't choose any segment!</h3>
                   <h2>Final Score: 0</h2>
-
+              </>)}
+                
               </>)
               
               
@@ -493,8 +503,10 @@ function App() {
                   </button>
             </div>
 
-              <div className='show-final-result'>
-                {routeLogs.map((route, index) => {
+            <div className='show-final-result'>
+              {visibleLogs.length !== 0 ? (<>
+              
+                {visibleLogs.map((route, index) => {
                   return (
                 <div key={index} className='log-card'>
                   {!invalidRoute ? (<>
@@ -504,12 +516,15 @@ function App() {
                     <h5>Balance: {route.currentCoins} 🪙</h5>
                   </>) : (<>
                     <h3>{route.from} ➔ {route.to}</h3>
-                    {/* <h4>Event: {route.eventName} ({route.effect >= 0 ? `+${route.effect}` : route.effect} 🪙)</h4> */}
                     </>)}
                 </div>
                   )
                 })}
-              </div>
+              
+              </>) : (<>
+                
+              </>)}
+            </div>
             
 
           </div>
@@ -544,7 +559,7 @@ function App() {
             <div className='segments-list'>
 
               <div className='single-segment'>
-                {gamePhase === 'planning' && metroStationsSegments.map((segment, index) => {
+                {gamePhase === 'planning' && metroSegments.map((segment, index) => {
 
                   const [stationA, stationB] = segment
 
@@ -599,6 +614,30 @@ function App() {
     {currentScreen === 'scoreboard' && gamePhase !== 'planning' && (
       <>       
         <Scoreboard scores={allScores} backToGame={() => setCurrentScreen('game')}/> 
+      </>
+    )}
+
+    {currentScreen === 'instructions' && (
+      <>
+      <button onClick={() => setCurrentScreen('login')}>Back to Login</button>
+      <p>
+      In the game, the player is assigned a starting station and a destination station, which vary in each game, 
+      within a fictional underground network. 
+      The player must plan and execute a valid route before time runs out, gaining or losing coins 
+      along the way due to random events. 
+      The goal is to reach the destination with the highest possible score. 
+      
+      The application allows users to play multiple games. Each game starts with 20 coins and consists of 
+      the following phases:
+
+      Setup: The player sees the network map with all stations, their connections, and the lines. 
+      When the player is ready to play, they move on to the next phase.
+      
+      Planning: The player sees three elements on the page:
+      the network map, showing only the stations with their names but without the lines connecting them;
+
+      
+      </p>
       </>
     )}
 

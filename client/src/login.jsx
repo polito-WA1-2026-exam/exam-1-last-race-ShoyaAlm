@@ -2,7 +2,7 @@ import { useState } from "react";
 import './css/login.css'
 
 
-function Login ({loginSuccess}) {
+function Login ({loginSuccess, changeCurrentScreen}) {
 
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
@@ -31,6 +31,8 @@ function Login ({loginSuccess}) {
     })
 
         return (
+            <>
+        <button onClick={() => changeCurrentScreen('instructions')}>Instructions</button>
             <div className="login-overlay">
             <form className="login-card-box" onSubmit={loginSubmit}>
                 <h2>🚇 Transit System Login</h2>
@@ -57,6 +59,8 @@ function Login ({loginSuccess}) {
                 <button type="submit" className="btn-login-submit">Authenticate</button>
             </form>
             </div>
+
+            </>
         );
 
 
