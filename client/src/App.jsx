@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, createContext } from 'react'
 import './css/App.css'
 import MetroMap from './metro'
 import Login from './login'
@@ -9,126 +9,12 @@ import Scoreboard from './Scoreboard'
   let metroSegments = []
   let events = {}
 
-
-function calculateDistance (firstStation, lastStation) {
-  
-  console.log('firstStation: ', firstStation);
-  console.log('lastStation: ', lastStation);
-  
-  if(!metroSegments || metroSegments.length === 0)
-    return 3;
-  
-  if(firstStation === lastStation)
-    return 0;
-
-  
-  var distance
-
-  const neighborStations = metroSegments.filter(metroStation => metroStation[0] == firstStation 
-    || metroStation[1] == firstStation)
-  
-  
-    console.log('neighborStations: ', neighborStations);
-
-
-  neighborStations.map((station) => {
-    if(station[0] == firstStation && station[1] == lastStation)
-        {
-          console.log('They are neighbors!');
-          distance = 1;
-      }
-
-    else if(station[1] == firstStation && station[0] == lastStation)
-      {
-        console.log('They are neighbors!');
-        distance = 1;
-      }
-      
-  })
-
-  if(distance === 1)
-    return 1
-
-
-      var currentStations = []
-      
-      neighborStations.map(neighborStation => {
-        
-
-        if(neighborStation[0] !== firstStation)
-          currentStations = [...currentStations, neighborStation[0]] 
-        else
-          currentStations = [...currentStations, neighborStation[1]]
-      })
-
-      console.log(firstStation,`'s neighbors: `, currentStations);
-            
-
-      
-      currentStations.map(currentStation => {
-
-        metroSegments.map(segment => {
-          if((segment[0] == currentStation && segment[1] == lastStation) 
-            || (segment[1] == currentStation && segment[0] == lastStation)){
-              console.log('the segment of the neighbor: ', segment);
-              console.log('they have only 2 distances between them!');
-              distance = 2
-            }
-        })
-
-      })
-
-    if (distance === 2)
-      return 2
-    
-    else
-      return 3
-
-}
-
-
-function assignRoute () {
-  
-  let firstStation
-  let lastStation
-  
-  let validPair = false;
-  
-  while(!validPair){
-    
-    let firstStationNum = Math.floor(Math.random() * 20);
-    let lastStationNum = Math.floor(Math.random() * 20);
-
-
-    if(firstStationNum !== lastStationNum){
-      
-      firstStation = stations[firstStationNum]
-      lastStation = stations[lastStationNum]
-    
-      const distance = calculateDistance(firstStation, lastStation) 
-        if(distance >= 3){
-          console.log('the distance: ', distance);
-          validPair = true;
-        } else{
-          console.log('the distance: ', distance);
-        }
-
-
-    }
-
-  }
-
-  console.log('we have a winner');
-  
-  return [firstStation, lastStation]
-  
-}
- 
-  
+  export const GameContext = createContext();
 
 function App() {
   
   const [user, setUser] = useState(null)
+  
   const [currentScreen, setCurrentScreen] = useState('login')
   
   const [stationCoordinates, setStationCoordinates] = useState(null)
@@ -179,6 +65,7 @@ function App() {
     }).catch(err => console.error('Network error fetching the map: ', err))
   }, [])
 
+
   useEffect(() => {
       fetch('/api/user', {
         method:'GET',
@@ -194,6 +81,7 @@ function App() {
       }).catch(err => console.error('Authentication error'))
 
     }, [])
+
 
   useEffect(() => {
 
@@ -266,18 +154,26 @@ function App() {
     }, [routeLogs, gamePhase])
 
   function startGame () {
-    console.log('stations: ', stations);
-    console.log('metroSegments: ', metroSegments);
-    console.log('events: ', events);
+
+    fetch('/api/generate-route')
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.success) {
+        console.log('Objectives generated:', data.startStation, '➔', data.endStation);
+        
+        setStartStation(data.startStation);
+        setCurrentStation(data.startStation);
+        setEndStation(data.endStation);
+        
+        setUserSegments([]);
+        setTimeLeft(50);
+        setGamePhase('planning');
+      } else {
+        console.error("Failed to generate match path targets: ", data.message);
+      }
+    })
+    .catch((err) => console.error("Network error starting the game match layout:", err));
     
-    
-    const targetRoute = assignRoute();
-    setStartStation(targetRoute[0])
-    setCurrentStation(targetRoute[0])
-    setEndStation(targetRoute[1])
-    setUserSegments([])
-    setTimeLeft(50)
-    setGamePhase('planning')
   }
 
 
@@ -374,7 +270,9 @@ function App() {
 
   return (
 
+    <GameContext.Provider value={{gamePhase, stationCoordinates, metroLines}}>
     <>
+
     {currentScreen === 'login' && user === null && (
       <Login loginSuccess={(loggedInUser) => {
         setUser(loggedInUser)
@@ -382,7 +280,7 @@ function App() {
       }} changeCurrentScreen={setCurrentScreen}/>
     )}
 
-    {loadingGame && (
+    {loadingGame && currentScreen === 'game' && (
       <>
       <div style={{ padding: '40px', textAlign: 'center' }}>Loading Metro Network Maps...</div>
       </>
@@ -447,14 +345,14 @@ function App() {
                 <span className="objective-label">Current Journey</span>
                 <div className="objective-route-row">
                   <div className="station-pill departure">
-                    <span className="pill-type">FROM</span>
+                    <span className="pill-type">Moving from</span>
                     <strong>{startStation}</strong>
                   </div>
                   
                   <div className="route-arrow">➔</div>
                   
                   <div className="station-pill arrival">
-                    <span className="pill-type">TO</span>
+                    <span className="pill-type">Arriving at</span>
                     <strong>{endStation}</strong>
                   </div>
                 </div>
@@ -608,6 +506,7 @@ function App() {
         </div>
       
       </>
+
     )}
 
 
@@ -618,30 +517,73 @@ function App() {
     )}
 
     {currentScreen === 'instructions' && (
-      <>
-      <button onClick={() => setCurrentScreen('login')}>Back to Login</button>
-      <p>
-      In the game, the player is assigned a starting station and a destination station, which vary in each game, 
-      within a fictional underground network. 
-      The player must plan and execute a valid route before time runs out, gaining or losing coins 
-      along the way due to random events. 
-      The goal is to reach the destination with the highest possible score. 
-      
-      The application allows users to play multiple games. Each game starts with 20 coins and consists of 
-      the following phases:
+      <div className="instructions-container">
+        <button onClick={() => setCurrentScreen('login')} className="btn-back">
+          ← Back to Login
+        </button>
+        
+        <h1 className="instructions-title">How to Play</h1>
+        
+        <div className="instructions-card intro-card">
+          <p>
+            In the game, the player is assigned a starting station and a destination station, 
+            which vary in each game, within a fictional underground network. 
+            The player must plan and execute a valid route before time runs out, gaining or losing coins 
+            along the way due to random events. 
+            The goal is to reach the destination with the highest possible score.
+          </p>
+          <p>
+            The application allows users to play multiple games. Each game starts with 20 coins and consists of 
+            two distinct phases:
+          </p>
+        </div>
 
-      Setup: The player sees the network map with all stations, their connections, and the lines. 
-      When the player is ready to play, they move on to the next phase.
-      
-      Planning: The player sees three elements on the page:
-      the network map, showing only the stations with their names but without the lines connecting them;
+        <div className="phases-grid">
+          <div className="instructions-card phase-card">
+            <h3><span>⏳</span> Phase 1: Setup</h3>
+            <p>
+              The player sees the network map with all stations, their connections, and the lines. 
+              Take this time to familiarize yourself with the layout. When you are ready to play, 
+              advance to the next phase.
+            </p>
+          </div>
 
-      
-      </p>
-      </>
+          <div className="instructions-card phase-card">
+            <h3><span>🛤️</span> Phase 2: Planning</h3>
+            <p>
+              The network map changes to show only the stations with their names, hiding the lines connecting them.
+              From the beginning of this phase, you have <strong>90 seconds</strong> to scroll through the list of pairs, 
+              mentally reconstruct the network, and build your route by selecting the segments in sequence.
+            </p>
+            <ul>
+              <li>Each segment may be selected only once.</li>
+              <li>The route must start from the assigned starting station and end at the assigned destination station.</li>
+              <li>You must submit before time expires, or the route built up to that point will be taken as-is.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="instructions-card rules-card">
+          <h3><span>📋</span> Route Validity Rules</h3>
+          <p>
+            A route is valid when it starts and ends at the assigned stations and each segment is reachable 
+            through one of the lines, with line changes possible only at interchange stations.
+          </p>
+          <p>
+            Routes remain valid if they pass through the same station more than once, but they <strong>must not</strong> 
+            involve any segment more than once.
+          </p>
+          <div className="warning-box">
+            <strong>⚠️ Warning:</strong> If the submitted route is invalid or incomplete, the execution phase is skipped 
+            and you lose all 20 starting coins, obtaining a score of zero.
+          </div>
+        </div>
+      </div>
     )}
 
     </>
+        </GameContext.Provider>
+
   );
 }
 

@@ -32,7 +32,7 @@ function Login ({loginSuccess, changeCurrentScreen}) {
 
         return (
             <>
-        <button onClick={() => changeCurrentScreen('instructions')}>Instructions</button>
+    <button onClick={() => changeCurrentScreen('instructions')} className="btn-instruction">Instructions</button>
             <div className="login-overlay">
             <form className="login-card-box" onSubmit={loginSubmit}>
                 <h2>🚇 Transit System Login</h2>

@@ -205,7 +205,7 @@ h1, h2 {
 }
 
 .pill-type {
-  font-size: 0.65rem;
+  font-size: 11px;
   font-weight: 700;
   color: #9cb4f6;
 }
@@ -535,4 +535,111 @@ h1, h2 {
   transform: none !important;
   background-color: #dc3545 !important;
   box-shadow: none !important;
+}
+
+
+.instructions-container {
+  max-width: 850px;
+  margin: 40px auto;
+  padding: 0 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
+  text-align: left;
+  line-height: 1.6;
+}
+
+
+.btn-back {
+  background-color: #2a2a2a;
+  color: #00ff88;
+  border: 1px solid #00ff88;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  margin-bottom: 25px;
+}
+
+.btn-back:hover {
+  background-color: #00ff88;
+  color: #121212;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
+}
+
+.instructions-title {
+  font-size: 32px;
+  color: #552cff;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #333;
+  padding-bottom: 10px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.instructions-card {
+  background: rgba(30, 30, 30, 0.75);
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  padding: 22px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.intro-card p {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+.intro-card p:last-child {
+  margin-bottom: 0;
+}
+
+.phases-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+  .phases-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.phase-card h3, .rules-card h3 {
+  margin-top: 0;
+  color: #ffffff;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 8px;
+}
+
+.phase-card ul {
+  padding-left: 20px;
+  margin-top: 10px;
+}
+
+.phase-card li {
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #cccccc;
+}
+
+.rules-card p {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+.warning-box {
+  background-color: rgba(255, 75, 75, 0.1);
+  border-left: 4px solid #ff4b4b;
+  padding: 12px 15px;
+  border-radius: 0 6px 6px 0;
+  margin-top: 15px;
+  color: #ff8888;
+  font-size: 14px;
 }

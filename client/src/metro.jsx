@@ -1,9 +1,15 @@
 import './css/metro.css';
+import { GameContext } from './App';
+import { useContext } from 'react';
 
-
-export default function MetroMap({ phase, stationCoordinates, metroLines }) {
+function MetroMap() {
   
-  const showLines = phase === 'setup';
+  const { gamePhase, stationCoordinates, metroLines } = useContext(GameContext)
+
+  if (!stationCoordinates || !metroLines) {
+    return <div style={{ textAlignment: 'center', padding: '20px' }}>Loading Map Elements...</div>;
+  }
+  const showLines = gamePhase === 'setup';
 
   return (
     <div className="metro-map-container">
@@ -72,3 +78,5 @@ export default function MetroMap({ phase, stationCoordinates, metroLines }) {
     </div>
   );
 }
+
+export default MetroMap
