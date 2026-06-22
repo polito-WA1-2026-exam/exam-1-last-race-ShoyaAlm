@@ -3,15 +3,21 @@ const router = express.Router()
 
 import passport from '../Passport.js'
 
-import controllers from '../controllers/controllers.js'
+import authentication from '../controllers/authentication.js'
+import user from '../controllers/user.js'
+import game from '../controllers/game.js'
 
-router.post('/login', passport.authenticate('local'), controllers.login)
-router.post('/logout', controllers.logout)
 
-router.get('/scores', controllers.getUsersScores)
-router.get('/user', controllers.getCurrentUser)
+router.post('/login', passport.authenticate('local'), authentication.login)
+router.post('/logout', authentication.logout)
 
-router.put('/updateScore', controllers.updateUserScore)
+router.get('/scores', user.getUsersScores)
+router.get('/user', user.getCurrentUser)
+router.put('/updateScore', user.updateUserScore)
+
+router.get('/game-details', game.getGameDetails)
+router.get('/map-layout', game.getMap)
+router.post('/submit-route', game.submitRoute)
 
 
 export default router
