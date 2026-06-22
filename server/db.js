@@ -50,13 +50,15 @@ const METRO_LINES = [
 
 
 
-  const events = {'trainNotArrivedInTime':-4, 'lostTicket':-3, 'trainDelay':-2, 'spareCoin':-1, 
-                'normalTrip':0, 'foundCoin':1 ,'earlyTrainArrival':2, 'helpfulPassenger': 3, 'expressTrain': 4}
+  const events = {'Train Not Arrived In Time':-4, 'Lost Ticket':-3, 'Train Delay':-2, 'Spare Coin':-1, 
+                'Normal Trip':0, 'Found Coin':1 ,'Early Train Arrival':2, 'Helpful Passenger': 3, 
+                'Express Train': 4}
             
 
   const users = [
         {username:'shoya', password:'12345', highestScore:'0'},
         {username:'josh', password:'12345', highestScore:'0'},
+        {username:'alex', password:'12345', highestScore:'0'},
         {username:'fulvio', password:'12345', highestScore:'0'},
     ]
 
@@ -143,15 +145,13 @@ const METRO_LINES = [
             return console.error(err.message);
         } 
 
-        const lineName = line.name
 
-        db.get(`SELECT id FROM lines WHERE name = ?`, [lineName], (err, row) => {
-          if (err || !row) 
+        db.get(`SELECT id FROM lines WHERE name = ?`, [line.name], (err, lineRow) => {
+          if (err || !lineRow) 
             return
 
-          const lineId = row.id
+          const lineId = lineRow.id
 
-          db.run(`DELETE FROM line_stations WHERE line_id = ?`, [lineId], () => {
             
             const stmtLineStation = db.prepare(`
               INSERT INTO line_stations (line_id, station_name, station_order) 
@@ -163,7 +163,7 @@ const METRO_LINES = [
             })
 
             stmtLineStation.finalize()
-          })
+
         })
       })
     })

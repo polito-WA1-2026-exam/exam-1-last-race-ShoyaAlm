@@ -56,6 +56,154 @@ const getGameDetails = (req, res) => {
 }
 
 
+function calculateDistance (firstStation, lastStation, metroSegments) {
+  
+  console.log('firstStation: ', firstStation);
+  console.log('lastStation: ', lastStation);
+  
+  if(!metroSegments || metroSegments.length === 0)
+    return 3;
+  
+  if(firstStation === lastStation)
+    return 0;
+
+  
+  var distance
+
+  const neighborStations = metroSegments.filter(metroStation => metroStation[0] == firstStation 
+    || metroStation[1] == firstStation)
+  
+
+  neighborStations.map((station) => {
+    if(station[0] == firstStation && station[1] == lastStation)
+        {
+          console.log('They are neighbors!');
+          distance = 1;
+      }
+
+    else if(station[1] == firstStation && station[0] == lastStation)
+      {
+        console.log('They are neighbors!');
+        distance = 1;
+      }
+      
+  })
+
+  if(distance === 1)
+    return 1
+
+
+      var currentStations = []
+      
+      neighborStations.map(neighborStation => {
+        
+
+        if(neighborStation[0] !== firstStation)
+          currentStations = [...currentStations, neighborStation[0]] 
+        else
+          currentStations = [...currentStations, neighborStation[1]]
+      })
+
+      console.log(firstStation,`'s neighbors: `, currentStations);
+            
+
+      
+      currentStations.map(currentStation => {
+
+        metroSegments.map(segment => {
+          if((segment[0] == currentStation && segment[1] == lastStation) 
+            || (segment[1] == currentStation && segment[0] == lastStation)){
+              console.log('the segment of the neighbor: ', segment);
+              console.log('they have only 2 distances between them!');
+              distance = 2
+            }
+        })
+
+      })
+
+    if (distance === 2)
+      return 2
+    
+    else
+      return 3
+
+}
+
+
+function assignRoute (stations, metroSegments) {
+  
+  let firstStation
+  let lastStation
+  
+  let validPair = false;
+  
+  while(!validPair){
+    
+    let firstStationNum = Math.floor(Math.random() * 20);
+    let lastStationNum = Math.floor(Math.random() * 20);
+
+
+    if(firstStationNum !== lastStationNum){
+      
+      firstStation = stations[firstStationNum]
+      lastStation = stations[lastStationNum]
+    
+      const distance = calculateDistance(firstStation, lastStation, metroSegments) 
+        if(distance >= 3){
+          console.log('the distance: ', distance);
+          validPair = true;
+        } else{
+          console.log('the distance: ', distance);
+        }
+
+
+    }
+
+  }
+
+  console.log('we have a winner');
+  
+  return [firstStation, lastStation]
+  
+}
+
+
+function generateRoute (req, res) {
+
+
+  db.all("SELECT name FROM stations", [], (err, stationRows) => {
+    if (err || !stationRows) {
+      return res.status(500).json({ success: false, message: "Error loading stations" });
+    }
+    
+    const stationsArray = stationRows.map(row => row.name);
+
+    const segmentQuery = `
+      SELECT s1.name AS from_name, s2.name AS to_name 
+      FROM segments seg
+      JOIN stations s1 ON seg.from_station_id = s1.id
+      JOIN stations s2 ON seg.to_station_id = s2.id
+    `;
+
+    db.all(segmentQuery, [], (err, segmentRows) => {
+      if (err || !segmentRows) {
+        return res.status(500).json({ success: false, message: "Error loading segments" });
+      }
+
+      const metroSegmentsArray = segmentRows.map(row => [row.from_name, row.to_name]);
+
+      const [startStation, endStation] = assignRoute(stationsArray, metroSegmentsArray);
+
+      return res.status(200).json({
+        success: true,
+        startStation: startStation,
+        endStation: endStation
+      });
+    });
+  });
+};
+
+
 const submitRoute = (req, res) => {
 
     const {startStation, endStation, userSegments, user} = req.body
@@ -267,4 +415,4 @@ const getMap = (req, res) => {
 }
 
 
-export default {getGameDetails, submitRoute, getMap}
+export default {getGameDetails, generateRoute, submitRoute, getMap}

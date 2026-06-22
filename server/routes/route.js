@@ -17,6 +17,7 @@ router.put('/updateScore', user.updateUserScore)
 
 router.get('/game-details', game.getGameDetails)
 router.get('/map-layout', game.getMap)
+router.get('/generate-route', game.generateRoute)
 router.post('/submit-route', game.submitRoute)
 
 
